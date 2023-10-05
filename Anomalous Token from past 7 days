@@ -1,0 +1,16 @@
+// Gather sessions with "Anomalous Token" alert from the last 7 days
+let SuspiciousSession = materialize(
+    AlertInfo
+    | where Timestamp > ago(7d) and Title == "Anomalous Token"
+    | join (AlertEvidence
+        | where Timestamp > ago(7d) and EntityType == "CloudLogonSession") on AlertId
+    | project sessionId = todynamic(AdditionalFields).SessionId
+);
+
+// Check for any records in the SuspiciousSession table
+let hasSuspiciousSessionIds = isnotempty(toscalar(SuspiciousSession));
+
+CloudAppEvents
+    | where hasSuspiciousSessionIds
+    // Filter for new inbox rule actions from the past 21 days matching suspicious sessions
+    | where Timestamp > ago(21d) and ActionType == "New-InboxRule" and RawEventData.SessionId in (SuspiciousSession)
