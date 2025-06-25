@@ -8,7 +8,8 @@ let SuspiciousSession = materialize(
 );
 
 // Check for any records in the SuspiciousSession table
-let hasSuspiciousSessionIds = isnotempty(toscalar(SuspiciousSession));
+// Use a summarize/count query to safely determine if SuspiciousSession has rows
+let hasSuspiciousSessionIds = toscalar(SuspiciousSession | summarize count()) > 0;
 
 CloudAppEvents
     | where hasSuspiciousSessionIds
